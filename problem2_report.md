@@ -139,6 +139,7 @@ Attention memory scales **quadratically** with sequence length (\(O(L^2)\) per l
 
 | File | Contents |
 |------|----------|
+| `README.md` | Setup, run instructions, repo layout |
 | `problem2.ipynb` | Full implementation with outputs |
 | `problem2_report.md` | This report |
 | `results.csv` | Required summary columns for P2 runs |
