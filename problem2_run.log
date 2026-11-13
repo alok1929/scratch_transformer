@@ -1,0 +1,238 @@
+[NbConvertApp] Converting notebook problem2.ipynb to notebook
+/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbformat/validator.py:434: MissingIDFieldWarning: Cell is missing an id field, this will become a hard error in future nbformat versions. You may want to use `normalize()` on your notebooks before validations (available since nbformat 5.1.4). Previous versions of nbformat are fixing this issue transparently, and will stop doing so in the future.
+  _validate(nbdict, ref, version, version_minor, relax_add_props)
+[IPKernelApp] WARNING | Kernel is running over TCP without encryption. All communication (including code and outputs) is sent in plain text and is susceptible to eavesdropping. Use IPC transport or launch with kernel manager-provisioned CurveZMQ keys to enable transport encryption.
+Traceback (most recent call last):
+  File "/home/kowshik/transformer_/.venv/bin/jupyter-nbconvert", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/jupyter_core/application.py", line 284, in launch_instance
+    super().launch_instance(argv=argv, **kwargs)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/traitlets/config/application.py", line 1080, in launch_instance
+    app.start()
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 420, in start
+    self.convert_notebooks()
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 597, in convert_notebooks
+    self.convert_single_notebook(notebook_filename)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 563, in convert_single_notebook
+    output, resources = self.export_single_notebook(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 487, in export_single_notebook
+    output, resources = self.exporter.from_filename(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 201, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 220, in from_file
+    return self.from_notebook_node(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/notebook.py", line 36, in from_notebook_node
+    nb_copy, resources = super().from_notebook_node(nb, resources, **kw)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 154, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 353, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/preprocessors/base.py", line 48, in __call__
+    return self.preprocess(nb, resources)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/preprocessors/execute.py", line 103, in preprocess
+    self.preprocess_cell(cell, resources, index)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/preprocessors/execute.py", line 124, in preprocess_cell
+    cell = self.execute_cell(cell, index, store_history=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/jupyter_core/utils/__init__.py", line 165, in wrapped
+    return loop.run_until_complete(inner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/miniconda3/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbclient/client.py", line 1062, in async_execute_cell
+    await self._check_raise_for_error(cell, cell_index, exec_reply)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbclient/client.py", line 918, in _check_raise_for_error
+    raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
+nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+------------------
+# 0. Environment and reproducibility
+import os, math, time, random, urllib.request, zipfile, io, gc, copy, json
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import TensorDataset, DataLoader
+
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("PyTorch:", torch.__version__)
+print("Device:", DEVICE)
+if DEVICE.type == "cuda":
+    print("GPU:", torch.cuda.get_device_name(0))
+# Problem 2 experiment config (match Problem 1 protocol where applicable)
+FIG_DIR = Path("figures")
+FIG_DIR.mkdir(parents=True, exist_ok=True)
+P2_HAR_SEEDS = [7, 21, 42]
+HAR_EPOCHS = 20
+HAR_BATCH = 128
+HAR_CLIP = 1.0
+LM_EPOCHS = 60
+LM_BATCHES_PER_EPOCH = 300
+LM_LR = 1e-3
+LM_WARMUP_STEPS = 200
+HEAD_ABLATION_EPOCHS = None  # defaults to LM_EPOCHS when None
+HEAD_ABLATION_BATCHES = None
+
+# Set P2_FAST_DEV=1 for a short smoke run (2 epochs) before the full overnight train.
+if os.environ.get("P2_FAST_DEV") == "1":
+    HAR_EPOCHS, LM_EPOCHS, LM_BATCHES_PER_EPOCH = 2, 2, 50
+    P2_HAR_SEEDS = [42]
+
+def save_fig(filename):
+    out = FIG_DIR / filename
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    print("saved", out)
+
+from sklearn.metrics import f1_score
+
+def macro_f1_score(y_true, y_pred, num_classes=6):
+    return float(f1_score(y_true, y_pred, labels=list(range(num_classes)), average="macro"))
+
+------------------
+
+----- stdout -----
+PyTorch: 2.15.0+cu132
+Device: cuda
+GPU: NVIDIA GeForce RTX 4070 Ti SUPER
+------------------
+
+[31m---------------------------------------------------------------------------[39m
+[31mModuleNotFoundError[39m                       Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[1][39m[32m, line 50[39m
+[32m     46[39m     out = FIG_DIR / filename
+[32m     47[39m     plt.savefig(out, dpi=[32m150[39m, bbox_inches=[33m"tight"[39m)
+[32m     48[39m     print([33m"saved"[39m, out)
+[32m     49[39m 
+[32m---> [39m[32m50[39m [38;5;28;01mfrom[39;00m sklearn.metrics [38;5;28;01mimport[39;00m f1_score
+[32m     51[39m 
+[32m     52[39m [38;5;28;01mdef[39;00m macro_f1_score(y_true, y_pred, num_classes=[32m6[39m):
+[32m     53[39m     [38;5;28;01mreturn[39;00m float(f1_score(y_true, y_pred, labels=list(range(num_classes)), average=[33m"macro"[39m))
+
+[31mModuleNotFoundError[39m: No module named 'sklearn'
+
+[NbConvertApp] Converting notebook problem2.ipynb to notebook
+/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbformat/validator.py:434: MissingIDFieldWarning: Cell is missing an id field, this will become a hard error in future nbformat versions. You may want to use `normalize()` on your notebooks before validations (available since nbformat 5.1.4). Previous versions of nbformat are fixing this issue transparently, and will stop doing so in the future.
+  _validate(nbdict, ref, version, version_minor, relax_add_props)
+[IPKernelApp] WARNING | Kernel is running over TCP without encryption. All communication (including code and outputs) is sent in plain text and is susceptible to eavesdropping. Use IPC transport or launch with kernel manager-provisioned CurveZMQ keys to enable transport encryption.
+Traceback (most recent call last):
+  File "/home/kowshik/transformer_/.venv/bin/jupyter-nbconvert", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/jupyter_core/application.py", line 284, in launch_instance
+    super().launch_instance(argv=argv, **kwargs)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/traitlets/config/application.py", line 1080, in launch_instance
+    app.start()
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 420, in start
+    self.convert_notebooks()
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 597, in convert_notebooks
+    self.convert_single_notebook(notebook_filename)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 563, in convert_single_notebook
+    output, resources = self.export_single_notebook(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 487, in export_single_notebook
+    output, resources = self.exporter.from_filename(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 201, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 220, in from_file
+    return self.from_notebook_node(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/notebook.py", line 36, in from_notebook_node
+    nb_copy, resources = super().from_notebook_node(nb, resources, **kw)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 154, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 353, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/preprocessors/base.py", line 48, in __call__
+    return self.preprocess(nb, resources)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/preprocessors/execute.py", line 103, in preprocess
+    self.preprocess_cell(cell, resources, index)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbconvert/preprocessors/execute.py", line 124, in preprocess_cell
+    cell = self.execute_cell(cell, index, store_history=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/jupyter_core/utils/__init__.py", line 165, in wrapped
+    return loop.run_until_complete(inner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kowshik/miniconda3/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbclient/client.py", line 1062, in async_execute_cell
+    await self._check_raise_for_error(cell, cell_index, exec_reply)
+  File "/home/kowshik/transformer_/.venv/lib/python3.11/site-packages/nbclient/client.py", line 918, in _check_raise_for_error
+    raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
+nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+------------------
+# Hand-checkable example (single head, d_k=1)
+q_small = torch.tensor([[[[1.0], [0.0], [-1.0]]]])
+k_small = torch.tensor([[[[1.0], [0.0], [-1.0]]]])
+v_small = torch.tensor([[[[10.0], [20.0], [30.0]]]])
+
+scores_small = torch.matmul(q_small, k_small.transpose(-2, -1))  # sqrt(d_k)=1
+out_small, weights_small = scaled_dot_product_attention(q_small, k_small, v_small)
+print("Scores:\n", scores_small[0, 0])
+print("Attention weights:\n", weights_small[0, 0])
+print("Output:\n", out_small[0, 0])
+expected_w = torch.tensor([[0.6652, 0.2447, 0.0900],
+                           [0.0900, 0.2447, 0.6652],
+                           [0.0900, 0.0900, 0.8200]])
+# row 1 output ~14.25 for the printed hand example
+assert torch.allclose(weights_small[0, 0], expected_w[0], atol=1e-3)
+assert torch.allclose(out_small[0, 0, 0], torch.tensor(14.25), atol=0.1)
+print("Hand-check asserts passed (instructor example assumed; document in report).")
+
+------------------
+
+----- stdout -----
+Scores:
+ tensor([[ 1.,  0., -1.],
+        [ 0.,  0.,  0.],
+        [-1.,  0.,  1.]])
+Attention weights:
+ tensor([[0.6652, 0.2447, 0.0900],
+        [0.3333, 0.3333, 0.3333],
+        [0.0900, 0.2447, 0.6652]])
+Output:
+ tensor([[14.2479],
+        [20.0000],
+        [25.7521]])
+------------------
+
+[31m---------------------------------------------------------------------------[39m
+[31mAssertionError[39m                            Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[4][39m[32m, line 15[39m
+[32m     11[39m expected_w = torch.tensor([[0.6652, 0.2447, 0.0900],
+[32m     12[39m                            [[32m0.0900[39m, [32m0.2447[39m, [32m0.6652[39m],
+[32m     13[39m                            [0.0900, 0.0900, 0.8200]])
+[32m     14[39m [38;5;66;03m# row 1 output ~14.25 for the printed hand example[39;00m
+[32m---> [39m[32m15[39m [38;5;28;01massert[39;00m torch.allclose(weights_small[[32m0[39m, [32m0[39m], expected_w[[32m0[39m], atol=[32m1e-3[39m)
+[32m     16[39m [38;5;28;01massert[39;00m torch.allclose(out_small[[32m0[39m, [32m0[39m, [32m0[39m], torch.tensor([32m14.25[39m), atol=[32m0.1[39m)
+[32m     17[39m print([33m"Hand-check asserts passed (instructor example assumed; document in report)."[39m)
+
+[31mAssertionError[39m: 
+
