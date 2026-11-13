@@ -1,0 +1,5 @@
+problem,model,seed,seq_len,test_acc,macro_f1,test_mse,params,sec_per_epoch,val_loss_nats,bits_per_char,notes
+P2,HAR Transformer positional=none,42,128,0.8713946386155412,0.8687321812884884,,398982,0.45735480613075197,,,HAR encoder; 8 epochs
+P2,HAR Transformer positional=sinusoidal,42,128,0.9012555140821175,0.8993823327638563,,398982,0.4492937861941755,,,HAR encoder; 8 epochs
+P2,HAR Transformer positional=learned,42,128,0.8883610451306413,0.8869843132714211,,415494,0.45112557883840054,,,HAR encoder; 8 epochs
+P2,"Tiny Shakespeare Transformer (4 heads, 4 layers)",42,128,,,,810049,2.8220351975411178,2.1200924706459046,3.058646893626877,"4 heads, 4 layers, d=128, 10 epochs"

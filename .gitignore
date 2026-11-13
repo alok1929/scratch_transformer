@@ -1,0 +1,6 @@
+# UCI HAR dataset (downloaded by problem2.ipynb)
+UCI_HAR_data/
+uci_har_data/
+
+# Local Python environment
+.venv/
